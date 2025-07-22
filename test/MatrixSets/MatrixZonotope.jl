@@ -1,8 +1,8 @@
 using LazySets, Test
 
-for N in [Float64, Float32, Rational{Int}]
+for N in @tN([Float64, Float32, Rational{Int}])
     # test constructor
-    c = N[1 0; 0 1]
+    c = N[1 0; 0 3]
     gens = [N[1 -1; 0 2], N[2 -1; -1 1]]
     MZ = MatrixZonotope(c, gens)
     @test MZ isa MatrixZonotope{N}
@@ -22,7 +22,7 @@ for N in [Float64, Float32, Rational{Int}]
     @test_throws ArgumentError MatrixZonotope(c, gens, [1, 1])
     @test_throws ArgumentError MatrixZonotope(c, gens, [1])
 
-    # Test for mismatching matrix sizes
+    # test for mismatching matrix sizes
     c_bad_size = N[1 0; 0 1; 0 0]
     @test_throws ArgumentError MatrixZonotope(c_bad_size, gens)
 
@@ -36,6 +36,15 @@ for N in [Float64, Float32, Rational{Int}]
     @test center(MZ3) == c
     @test isempty(generators(MZ3))
     @test isempty(indexvector(MZ3))
+
+    # transpose
+    MZt = transpose(MZ)
+    @test center(MZt) == c
+    @test generators(MZt) == [transpose(Ai) for Ai in generators(MZ)]
+
+    # norm
+    @test norm(MZ, Inf) == 7
+    @test norm(MZ, 1) == 8
 
     #transpose
     MZt = transpose(MZ)
@@ -96,7 +105,7 @@ for N in (Float64, Float32, Rational{Int})
     @test_throws AssertionError MatrixZonotopeProduct(A_mz, C_mz)
 end
 
-for N in [Float64, Float32]
+for N in @tN([Float64, Float32])
     MZ = rand(MatrixZonotope; N=N)
     @test MZ isa MatrixZonotope{N}
 end

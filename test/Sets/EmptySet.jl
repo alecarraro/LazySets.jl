@@ -1,4 +1,9 @@
 using LazySets, Test
+if !isdefined(@__MODULE__, Symbol("@tN"))
+    macro tN(v)
+        return v
+    end
+end
 
 function isidentical(::EmptySet, ::EmptySet)
     return false
@@ -16,7 +21,7 @@ let
     end
 end
 
-for N in [Float64, Float32, Rational{Int}]
+for N in @tN([Float64, Float32, Rational{Int}])
     # auxiliary sets
     B = BallInf(ones(N, 2), N(1))
     U = Universe{N}(2)
@@ -44,11 +49,11 @@ for N in [Float64, Float32, Rational{Int}]
     @test_throws ArgumentError an_element(E)
 
     # area
+    @test_throws DimensionMismatch area(EmptySet{N}(1))
     for X in (E, E3)
         res = area(X)
         @test res isa N && res == N(0)
     end
-    @test_throws DimensionMismatch area(EmptySet{N}(4))
 
     # chebyshev_center_radius
     @test_throws ArgumentError chebyshev_center_radius(E)
@@ -184,8 +189,8 @@ for N in [Float64, Float32, Rational{Int}]
     @test volume(E) == N(0)
 
     # affine_map
-    @test_throws AssertionError affine_map(ones(N, 2, 3), E, N[1, 1])
-    @test_throws AssertionError affine_map(ones(N, 2, 2), E, N[1])
+    @test_throws DimensionMismatch affine_map(ones(N, 2, 3), E, N[1, 1])
+    @test_throws DimensionMismatch affine_map(ones(N, 2, 2), E, N[1])
     E2 = affine_map(ones(N, 2, 2), E, N[1, 1])
     @test isidentical(E, E2)
     E2 = affine_map(ones(N, 3, 2), E, N[1, 1, 3])
@@ -199,7 +204,7 @@ for N in [Float64, Float32, Rational{Int}]
     end
 
     # exponential_map
-    @test_throws DimensionMismatch exponential_map(ones(N, 2, 3), E)
+    @test_throws DimensionMismatch exponential_map(ones(N, 1, 1), E)
     @test_throws DimensionMismatch exponential_map(ones(N, 3, 2), E)
     E2 = exponential_map(ones(N, 2, 2), E)
     @test isidentical(E, E2)
@@ -210,6 +215,7 @@ for N in [Float64, Float32, Rational{Int}]
 
     # is_interior_point
     @test_throws DimensionMismatch is_interior_point(N[0], E)
+    @test_throws DimensionMismatch is_interior_point(N[0], E; ε=N(0))
     if N <: AbstractFloat
         @test !is_interior_point(N[0, 0], E)
     else
@@ -220,7 +226,7 @@ for N in [Float64, Float32, Rational{Int}]
     end
 
     # linear_map
-    @test_throws DimensionMismatch linear_map(ones(N, 2, 3), E)
+    @test_throws DimensionMismatch linear_map(ones(N, 2, 1), E)
     E2 = linear_map(ones(N, 2, 2), E)
     @test isidentical(E, E2)
     E2 = linear_map(ones(N, 3, 2), E)
@@ -232,14 +238,16 @@ for N in [Float64, Float32, Rational{Int}]
     # @test isidentical(E3, E2)
 
     # permute
+    @test_throws DimensionMismatch permute(E, [1])
     @test_throws DimensionMismatch permute(E, [1, -1])
-    @test_throws DimensionMismatch permute(E, [1, 2, 2])
+    @test_throws DimensionMismatch permute(E, [1, 3])
     E2 = permute(E, [2, 1])
     @test isidentical(E, E2)
 
     # project
-    @test_throws DimensionMismatch project(E, [1, -1])
     @test_throws DimensionMismatch project(E, [1, 2, 3])
+    @test_throws DimensionMismatch project(E, [1, -1])
+    @test_throws DimensionMismatch project(E, [1, 3])
     E2 = project(E, [2])
     @test E2 isa EmptySet{N} && dim(E2) == 1
 
@@ -298,6 +306,7 @@ for N in [Float64, Float32, Rational{Int}]
     end
 
     # difference
+    @test_throws DimensionMismatch difference(E, E3)
     @test_throws DimensionMismatch difference(B, E3)
     @test_throws DimensionMismatch difference(E3, B)
     for E2 in (difference(E, E), difference(E, B), difference(E, U))
@@ -316,7 +325,7 @@ for N in [Float64, Float32, Rational{Int}]
     end
 
     # exact_sum
-    @test_throws AssertionError exact_sum(E, E3)
+    @test_throws DimensionMismatch exact_sum(E, E3)
     for E2 in (exact_sum(E, E), exact_sum(E, B), exact_sum(B, E))
         @test isidentical(E, E2)
     end
@@ -346,13 +355,14 @@ for N in [Float64, Float32, Rational{Int}]
     @test E != E3 && E3 != E && E != B && B != E
 
     # isequivalent
-    @test_throws AssertionError isequivalent(E, E3)
+    @test_throws DimensionMismatch isequivalent(E, E3)
     @test isequivalent(E, E)
     @test !isequivalent(E, B) && !isequivalent(B, E)
 
     # isstrictsubset
-    @test_throws AssertionError B ⊂ E3
-    @test_throws AssertionError E3 ⊂ B
+    @test_throws DimensionMismatch E ⊂ E3
+    @test_throws DimensionMismatch B ⊂ E3
+    @test_throws DimensionMismatch E3 ⊂ B
     for X in (E, B)
         @test !(X ⊂ E)
         res, w = ⊂(X, E, true)
@@ -388,6 +398,7 @@ for N in [Float64, Float32, Rational{Int}]
     end
 
     # minkowski_difference
+    @test_throws DimensionMismatch minkowski_difference(E, E3)
     @test_throws DimensionMismatch minkowski_difference(B, E3)
     @test_throws DimensionMismatch minkowski_difference(E3, B)
     # empty difference
@@ -411,7 +422,7 @@ for N in [Float64, Float32, Rational{Int}]
     end
 end
 
-for N in [Float64, Float32]
+for N in @tN([Float64, Float32])
     E = EmptySet{N}(2)
 
     # rationalize

@@ -23,8 +23,11 @@ include("linear_map.jl")
 include("scale.jl")
 include("center.jl")
 include("rand.jl")
+include("scale.jl")
+include("norm.jl")
 
 include("generators.jl")
+include("indexvector.jl")
 include("ngens.jl")
 
 end #module

@@ -1,4 +1,9 @@
 using LazySets, Test
+if !isdefined(@__MODULE__, Symbol("@tN"))
+    macro tN(v)
+        return v
+    end
+end
 
 function isidentical(::Universe, ::Universe)
     return false
@@ -15,7 +20,7 @@ let
     @test U.dim == 2
 end
 
-for N in [Float64, Float32, Rational{Int}]
+for N in @tN([Float64, Float32, Rational{Int}])
     # auxiliary sets
     B = BallInf(ones(N, 2), N(1))
     E = EmptySet{N}(2)
@@ -37,8 +42,9 @@ for N in [Float64, Float32, Rational{Int}]
     @test x isa Vector{N} && length(x) == 2
 
     # area
-    @test_throws AssertionError area(Universe{N}(1))
-    for res in (area(U), area(U3))
+    @test_throws DimensionMismatch area(Universe{N}(1))
+    for X in (U, U3)
+        res = area(X)
         @test res isa N && res == N(Inf)
     end
 
@@ -189,8 +195,8 @@ for N in [Float64, Float32, Rational{Int}]
     @test x isa N && x == N(Inf)
 
     # affine_map
-    @test_throws AssertionError affine_map(ones(N, 2, 3), U, N[1, 1])
-    @test_throws AssertionError affine_map(ones(N, 2, 2), U, N[1])
+    @test_throws DimensionMismatch affine_map(ones(N, 2, 3), U, N[1, 1])
+    @test_throws DimensionMismatch affine_map(ones(N, 2, 2), U, N[1])
     @static if isdefined(@__MODULE__, :Polyhedra) && isdefined(@__MODULE__, :CDDLib)
         # TODO this should work, even without Polyhedra
         @test_broken affine_map(ones(N, 2, 2), U, N[1, 1])
@@ -201,33 +207,34 @@ for N in [Float64, Float32, Rational{Int}]
     end
 
     # distance (between point and set)
-    @test_throws AssertionError distance(U, N[0])
+    @test_throws DimensionMismatch distance(U, N[0])
     x = N[0, 0]
     for res in (distance(U, x), distance(x, U))
         @test res isa N && res == N(0)
     end
 
     # exponential_map
-    @test_throws AssertionError exponential_map(ones(N, 2, 3), U)
-    @test_throws AssertionError exponential_map(ones(N, 3, 2), U)
+    @test_throws DimensionMismatch exponential_map(ones(N, 1, 1), U)
+    @test_throws DimensionMismatch exponential_map(ones(N, 3, 2), U)
 
     # in
-    @test_throws AssertionError N[0] ∈ U
+    @test_throws DimensionMismatch N[0] ∈ U
     @test N[0, 0] ∈ U
 
     # is_interior_point
-    @test_throws AssertionError is_interior_point(N[0], U)
+    @test_throws DimensionMismatch is_interior_point(N[0], U)
+    @test_throws DimensionMismatch is_interior_point(N[0], U; ε=N(0))
     if N <: AbstractFloat
         @test is_interior_point(N[0, 0], U)
     else
-        @test_throws AssertionError is_interior_point(N[0, 0], U)
+        @test_throws ArgumentError is_interior_point(N[0, 0], U)
         @test is_interior_point(N[0, 0], U; ε=1 // 100)
         # incompatible numeric type
         @test_throws ArgumentError is_interior_point([0.0, 0.0], U)
     end
 
     # linear_map
-    @test_throws AssertionError linear_map(ones(N, 2, 3), U)
+    @test_throws DimensionMismatch linear_map(ones(N, 2, 1), U)
     @static if isdefined(@__MODULE__, :Polyhedra) && isdefined(@__MODULE__, :CDDLib)
         # TODO this should work, even without Polyhedra
         @test_broken linear_map(ones(N, 2, 2), U)
@@ -244,14 +251,16 @@ for N in [Float64, Float32, Rational{Int}]
     @test isidentical(U3, U2)
 
     # permute
-    @test_throws AssertionError permute(U, [1, -1])
-    @test_throws AssertionError permute(U, [1, 2, 2])
+    @test_throws DimensionMismatch permute(U, [1])
+    @test_throws DimensionMismatch permute(U, [1, -1])
+    @test_throws DimensionMismatch permute(U, [1, 3])
     U2 = permute(U, [2, 1])
     @test isidentical(U, U2)
 
     # project
-    @test_throws AssertionError project(U, [1, -1])
-    @test_throws AssertionError project(U, [1, 2, 3])
+    @test_throws DimensionMismatch project(U, [1, 2, 3])
+    @test_throws DimensionMismatch project(U, [1, -1])
+    @test_throws DimensionMismatch project(U, [1, 3])
     U2 = project(U, [2])
     @test U2 isa Universe{N} && dim(U2) == 1
 
@@ -276,7 +285,7 @@ for N in [Float64, Float32, Rational{Int}]
     @test_throws ArgumentError scale!(N(0), U2)
 
     # support_function
-    @test_throws AssertionError ρ(N[1], U)
+    @test_throws DimensionMismatch ρ(N[1], U)
     v = ρ(N[-1, 2], U)
     @test v isa N && v == N(Inf)
     v = ρ(N[2, 0], U)
@@ -284,7 +293,7 @@ for N in [Float64, Float32, Rational{Int}]
     @test ρ(N[0, 0], U) == N(0)
 
     # support_vector
-    @test_throws AssertionError σ(N[1], U)
+    @test_throws DimensionMismatch σ(N[1], U)
     x = σ(N[-1, 2], U)
     @test x isa Vector{N} && x == N[-Inf, Inf]
     x = σ(N[2, 0], U)
@@ -293,11 +302,11 @@ for N in [Float64, Float32, Rational{Int}]
     @test x isa Vector{N} && x == N[0, 0]
 
     # translate
-    @test_throws AssertionError translate(U, N[1])
+    @test_throws DimensionMismatch translate(U, N[1])
     U2 = translate(U, N[1, 2])
     @test isidentical(U, U2)
     # translate!
-    @test_throws AssertionError translate!(U, N[1])
+    @test_throws DimensionMismatch translate!(U, N[1])
     U2 = copy(U)
     translate!(U2, N[1, 2])
     @test isidentical(U, U2)
@@ -308,7 +317,7 @@ for N in [Float64, Float32, Rational{Int}]
     end
 
     # convex_hull (binary)
-    @test_throws AssertionError convex_hull(U, U3)
+    @test_throws DimensionMismatch convex_hull(U, U3)
     U2 = convex_hull(U, U)
     @test isidentical(U, U2)
     for U2 in (convex_hull(U, Pnc), convex_hull(Pnc, U), convex_hull(U, E), convex_hull(E, U))
@@ -316,8 +325,9 @@ for N in [Float64, Float32, Rational{Int}]
     end
 
     # difference
-    @test_throws AssertionError difference(B, U3)
-    @test_throws AssertionError difference(U3, B)
+    @test_throws DimensionMismatch difference(U, U3)
+    @test_throws DimensionMismatch difference(B, U3)
+    @test_throws DimensionMismatch difference(U3, B)
     for E2 in (difference(U, U), difference(B, U))
         @test E2 isa EmptySet{N} && dim(E2) == 2
     end
@@ -325,8 +335,7 @@ for N in [Float64, Float32, Rational{Int}]
     @test X isa UnionSetArray{N,<:HalfSpace} && length(array(X)) == 4 && X == complement(B)
 
     # distance (between two sets)
-    @test_throws AssertionError distance(U, U3)
-    @test_throws AssertionError distance(U3, U)
+    @test_throws DimensionMismatch distance(U, U3)
     for v in (distance(U, U), distance(U, B), distance(B, U), distance(U, Z), distance(Z, U))
         @test v isa N && v == N(0)
     end
@@ -335,14 +344,13 @@ for N in [Float64, Float32, Rational{Int}]
     end
 
     # exact_sum
-    @test_throws AssertionError exact_sum(U, U3)
-    @test_throws AssertionError exact_sum(U3, U)
+    @test_throws DimensionMismatch exact_sum(U, U3)
     for U2 in (exact_sum(U, U), exact_sum(U, B), exact_sum(B, U))
         @test isidentical(U, U2)
     end
 
     # intersection
-    @test_throws AssertionError intersection(U, U3)
+    @test_throws DimensionMismatch intersection(U, U3)
     U2 = intersection(U, U)
     @test isidentical(U, U2)
     for X in (intersection(U, B), intersection(B, U))
@@ -357,7 +365,7 @@ for N in [Float64, Float32, Rational{Int}]
     @test !(U ≈ U3) && !(U3 ≈ U) && !(U ≈ B) && !(B ≈ U)
 
     # isdisjoint
-    @test_throws AssertionError isdisjoint(U, U3)
+    @test_throws DimensionMismatch isdisjoint(U, U3)
     @test !isdisjoint(U, U)
     res, w = isdisjoint(U, U, true)
     @test !res && w isa Vector{N} && w ∈ U
@@ -367,8 +375,8 @@ for N in [Float64, Float32, Rational{Int}]
         @test res && w isa Vector{N} && isempty(w)
     end
     @test !isdisjoint(U, B) && !isdisjoint(B, U) && !isdisjoint(U, Pnc) && !isdisjoint(Pnc, U)
-    # TODO add `isdisjoint(U, Pnc, true), isdisjoint(Pnc, U, true)` below once witness production is supported by Polygon
-    for (res, w) in (isdisjoint(U, B, true), isdisjoint(B, U, true))
+    for (res, w) in (isdisjoint(U, B, true), isdisjoint(B, U, true), isdisjoint(U, Pnc, true),
+                     isdisjoint(Pnc, U, true))
         @test !res && w isa Vector{N} && w ∈ B && w ∈ U
     end
 
@@ -377,14 +385,14 @@ for N in [Float64, Float32, Rational{Int}]
     @test U != U3 && U3 != U && U != B && B != U
 
     # isequivalent
-    @test_throws AssertionError isequivalent(U, U3)
-    @test_throws AssertionError isequivalent(U3, U)
+    @test_throws DimensionMismatch isequivalent(U, U3)
     @test isequivalent(U, U)
     @test !isequivalent(U, B) && !isequivalent(B, U)
 
     # isstrictsubset
-    @test_throws AssertionError B ⊂ U3
-    @test_throws AssertionError U3 ⊂ B
+    @test_throws DimensionMismatch U ⊂ U3
+    @test_throws DimensionMismatch B ⊂ U3
+    @test_throws DimensionMismatch U3 ⊂ B
     @test !(U ⊂ U)
     res, w = ⊂(U, U, true)
     @test !res && w isa Vector{N} && isempty(w)
@@ -396,8 +404,8 @@ for N in [Float64, Float32, Rational{Int}]
     @test res && w isa Vector{N} && w ∉ B && w ∈ U
 
     # issubset
-    @test_throws AssertionError B ⊆ U3
-    @test_throws AssertionError U3 ⊆ B
+    @test_throws DimensionMismatch B ⊆ U3
+    @test_throws DimensionMismatch U3 ⊆ B
     for X in (U, B, Pnc)
         @test X ⊆ U
         res, w = ⊆(X, U, true)
@@ -415,7 +423,7 @@ for N in [Float64, Float32, Rational{Int}]
     # TODO test `U ⊆ X` with non-Universe `X` for which `isuniversal(X) == true` (currently n/a)
 
     # linear_combination
-    @test_throws AssertionError linear_combination(U, U3)
+    @test_throws DimensionMismatch linear_combination(U, U3)
     for U2 in (linear_combination(U, Pnc), linear_combination(Pnc, U),
                linear_combination(U, B), linear_combination(B, U))
         @test isidentical(U, U2)
@@ -425,8 +433,9 @@ for N in [Float64, Float32, Rational{Int}]
     end
 
     # minkowski_difference
-    @test_throws AssertionError minkowski_difference(B, U3)
-    @test_throws AssertionError minkowski_difference(U3, B)
+    @test_throws DimensionMismatch minkowski_difference(U, U3)
+    @test_throws DimensionMismatch minkowski_difference(B, U3)
+    @test_throws DimensionMismatch minkowski_difference(U3, B)
     # Universe
     for U2 in (minkowski_difference(U, U), minkowski_difference(U, B), minkowski_difference(U, Z))
         @test isidentical(U, U2)
@@ -437,8 +446,7 @@ for N in [Float64, Float32, Rational{Int}]
     # TODO test `minkowski_difference(X, U)` with non-Universe `X` for which `isuniversal(X) == true` (currently n/a)
 
     # minkowski_sum
-    @test_throws AssertionError minkowski_sum(U, U3)
-    @test_throws AssertionError minkowski_sum(U3, U)
+    @test_throws DimensionMismatch minkowski_sum(U, U3)
     for U2 in (minkowski_sum(U, U), minkowski_sum(U, B), minkowski_sum(B, U))
         @test isidentical(U, U2)
     end
@@ -451,7 +459,7 @@ for N in [Float64, Float32, Rational{Int}]
     end
 end
 
-for N in [Float64, Float32]
+for N in @tN([Float64, Float32])
     U = Universe{N}(2)
 
     # rationalize

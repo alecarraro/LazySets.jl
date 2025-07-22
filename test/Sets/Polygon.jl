@@ -3,8 +3,13 @@ using LazySets: ⪯
 using LazySets.ReachabilityBase.Arrays: is_cyclic_permutation
 using LazySets.ReachabilityBase.Comparison: _isapprox
 using LazySets.ReachabilityBase.Arrays: ispermutation
+if !isdefined(@__MODULE__, Symbol("@tN"))
+    macro tN(v)
+        return v
+    end
+end
 
-for N in [Float64, Float32, Rational{Int}]
+for N in @tN([Float64, Float32, Rational{Int}])
     # Empty polygon
     p = HPolygon{N}()
 
@@ -81,8 +86,8 @@ for N in [Float64, Float32, Rational{Int}]
     HPolygonOpt(constraints_list(H))
 
     # support vector of polygon with no constraints
-    @test_throws AssertionError σ(N[0], HPolygon{N}())
-    @test_throws AssertionError σ(N[0], HPolygonOpt{N}())
+    @test_throws DimensionMismatch σ(N[0], HPolygon{N}())
+    @test_throws DimensionMismatch σ(N[0], HPolygonOpt{N}())
 
     # boundedness
     @test isbounded(p) && isbounded(po)
@@ -507,9 +512,9 @@ for N in [Float64, Float32, Rational{Int}]
     @test project(V, [2, 1]) == VPolygon([N[1, 0], N[0, 1], N[0, -1]])
     V = VPolygon([N[1, 0], N[1, 1]])
     @test project(V, [1]) == Interval(N(1), N(1))
-    @test_throws AssertionError project(V, [3])
-    @test_throws AssertionError project(V, [1, 3])
-    @test_throws ArgumentError project(V, [1, 2, 3])
+    @test_throws DimensionMismatch project(V, [3])
+    @test_throws DimensionMismatch project(V, [1, 3])
+    @test_throws DimensionMismatch project(V, [1, 2, 3])
 
     # permute
     V = VPolygon([N[1, 0], N[1, 2]])
@@ -585,7 +590,7 @@ for N in [Float64, Float32, Rational{Int}]
     end
 end
 
-for N in [Float64, Float32]
+for N in @tN([Float64, Float32])
     v1 = N[1 // 10, 3 // 10]
     v2 = N[1 // 5, 1 // 10]
     v3 = N[2 // 5, 3 // 10]
@@ -767,12 +772,18 @@ for N in [Float64]
     @test isa(Pr, HPolygon{Rational{BigInt},Vector{Rational{BigInt}}})
 end
 
-# default Float64 constructors
-@test HPolygon() isa HPolygon{Float64,Vector{Float64}}
-@test HPolygonOpt() isa HPolygonOpt{Float64,Vector{Float64}}
-@test VPolygon() isa VPolygon{Float64}
+let
+    # default Float64 constructors
+    @test HPolygon() isa HPolygon{Float64,Vector{Float64}}
+    @test HPolygonOpt() isa HPolygonOpt{Float64,Vector{Float64}}
+    @test VPolygon() isa VPolygon{Float64}
 
-# isoperationtype
-@test !isoperationtype(HPolygon)
-@test !isoperationtype(HPolygonOpt)
-@test !isoperationtype(VPolygon)
+    # construction from constraints of mixed numeric types
+    P = HPolygon([HalfSpace([1.0, 1.0], 1.0), HalfSpace(Float16[1, 1], Float16(1))])
+    @test P isa HPolygon{Float64}
+
+    # isoperationtype
+    @test !isoperationtype(HPolygon)
+    @test !isoperationtype(HPolygonOpt)
+    @test !isoperationtype(VPolygon)
+end

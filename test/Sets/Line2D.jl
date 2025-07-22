@@ -1,7 +1,12 @@
 using LazySets, Test
 using LazySets.ReachabilityBase.Arrays: ispermutation
+if !isdefined(@__MODULE__, Symbol("@tN"))
+    macro tN(v)
+        return v
+    end
+end
 
-for N in [Float64, Float32, Rational{Int}]
+for N in @tN([Float64, Float32, Rational{Int}])
     # construction
     a1 = N[0, 1]
     b1 = N(1)
@@ -107,7 +112,7 @@ for N in [Float64, Float32, Rational{Int}]
     @test project(L, [1, 2]) == L
     @test project(L, [2, 1]) == Line2D(N[0, 2], N(4))
     @test_throws ArgumentError project(L, [1, 1])
-    @test_throws ArgumentError project(L, [1, 2, 1])
+    @test_throws DimensionMismatch project(L, [1, 2, 1])
 
     # translation
     @test translate(l1, N[1, 2]) == Line2D(a1, N(3))
@@ -130,7 +135,7 @@ for N in [Float64, Float32, Rational{Int}]
     @test res && w isa Vector{N} && isempty(w)
 end
 
-for N in [Float64, Float32]
+for N in @tN([Float64, Float32])
     # rand
     @test rand(Line2D; N=N) isa Line2D{N}
 

@@ -1,4 +1,4 @@
-for N in [Float64, Float32]
+for N in @tN([Float64, Float32])
     B = BallInf(zeros(N, 2), N(1))
     E = HPolyhedron([HalfSpace(N[1], N(0)), HalfSpace(N[-1], N(-1))])  # empty
     U = Universe{N}(3)
@@ -23,10 +23,11 @@ for N in [Float64, Float32]
     @test !isempty(X) && !isempty(X⁻) && isempty(Y) && !isempty(Z)
 
     # an_element
-    for S in [X, X⁻, Z]
+    for S in [X, Z]
         v = an_element(S)
         @test v isa AbstractVector{N} && length(v) == dim(S)
     end
+    @test_throws ArgumentError an_element(X⁻)
     @test_throws ErrorException an_element(Y)
 
     # center

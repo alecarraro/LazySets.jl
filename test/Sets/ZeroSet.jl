@@ -1,4 +1,9 @@
 using LazySets, Test
+if !isdefined(@__MODULE__, Symbol("@tN"))
+    macro tN(v)
+        return v
+    end
+end
 
 let
     # default Float64 constructor
@@ -6,7 +11,7 @@ let
     @test Z isa ZeroSet{Float64} && Z.dim == 2
 end
 
-for N in [Float64, Float32, Rational{Int}]
+for N in @tN([Float64, Float32, Rational{Int}])
     Z = ZeroSet{N}(2)
     B = BallInf(ones(N, 2), N(1))
 
@@ -55,12 +60,13 @@ for N in [Float64, Float32, Rational{Int}]
 
     # subset
     z = ZeroSet{N}(1)
+    @test_throws DimensionMismatch z ⊆ Z
     s1 = Singleton(N[0])
     s2 = Singleton(N[2])
     @test z ⊆ s1 && ⊆(z, s1, true)[1]
     subset, point = ⊆(z, s2, true)
     @test z ⊈ s2 && !subset && point ∈ z && point ∉ s2
-    @test z ⊆ z && z ⊈ ZeroSet{N}(2)
+    @test z ⊆ z
 
     # linear map (concrete)
     M = hcat(N[1])
@@ -97,7 +103,7 @@ for N in [Float64, Float32, Rational{Int}]
     @test scale(N(-2), Z) == Z2 == ZeroSet{N}(dim(Z))
 end
 
-for N in [Float64, Float32]
+for N in @tN([Float64, Float32])
     # rand
     @test rand(ZeroSet; N=N) isa ZeroSet{N}
 end

@@ -3,8 +3,13 @@ using LazySets.ReachabilityBase.Arrays: ispermutation
 using LazySets.ReachabilityBase.Arrays: SingleEntryVector
 using IntervalArithmetic: IntervalBox
 import IntervalArithmetic as IA
+if !isdefined(@__MODULE__, Symbol("@tN"))
+    macro tN(v)
+        return v
+    end
+end
 
-for N in [Float64, Float32, Rational{Int}]
+for N in @tN([Float64, Float32, Rational{Int}])
     # constructor with mixed vectors
     Hyperrectangle(sparsevec([1], N[1], 1), N[1])
     Hyperrectangle(N[1], sparsevec([1], N[1], 1))
@@ -111,9 +116,9 @@ for N in [Float64, Float32, Rational{Int}]
     # area/volume
     @test area(h) == volume(h) == N(8)
     h1 = Hyperrectangle(N[0], N[1])
-    @test_throws AssertionError area(h1)
+    @test_throws DimensionMismatch area(h1)
     @test volume(h1) == N(2)
-    h1 = Hyperrectangle(N[0, 0, 0], N[1, 3//2, 2])
+    h1 = Hyperrectangle(N[0, 0, 0], N[1, 3 // 2, 2])
     @test area(h1) == N(52)
     @test volume(h1) == N(24)
 
@@ -378,7 +383,7 @@ for N in [Float64, Float32, Rational{Int}]
     @test H2 == H3 == Hyperrectangle(N[3, 5, 7], N[4, 5, 6])
 end
 
-for N in [Float64, Float32]
+for N in @tN([Float64, Float32])
     # rand
     @test rand(Hyperrectangle; N=N) isa Hyperrectangle{N}
 

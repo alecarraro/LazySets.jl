@@ -213,7 +213,7 @@ end
 The support value is ``cᵀ d + ‖Gᵀ d‖₁``, where ``c`` is the center and ``G`` is
 the generator matrix of `Z`.
 """
-function ρ(d::AbstractVector, Z::AbstractZonotope)
+@validate function ρ(d::AbstractVector, Z::AbstractZonotope)
     c = center(Z)
     G = genmat(Z)
     return dot(c, d) + abs_sum(d, G)
@@ -229,7 +229,7 @@ end
 If the direction has norm zero, the vertex with ``ξ_i = 1 \\ \\ ∀ i = 1,…, p``
 is returned.
 """
-function σ(d::AbstractVector, Z::AbstractZonotope)
+@validate function σ(d::AbstractVector, Z::AbstractZonotope)
     G = genmat(Z)
     return center(Z) .+ G * sign_cadlag.(At_mul_B(G, d))
 end
@@ -268,9 +268,7 @@ We consider the ``p``-dimensional space of elements ``(ξ_1, …, ξ_p)``
 constrained to ``ξ_i ∈ [-1, 1]`` for all ``i = 1, …, p`` such that
 ``x-c = Gξ`` holds.
 """
-function ∈(x::AbstractVector, Z::AbstractZonotope; solver=nothing)
-    @assert length(x) == dim(Z)
-
+@validate function ∈(x::AbstractVector, Z::AbstractZonotope; solver=nothing)
     p = ngens(Z)
     if p == 0
         # no generators can cause trouble in LP solver
@@ -305,13 +303,10 @@ A `Zonotope`.
 
 We apply the linear map to the center and the generators.
 
-If the map has outpu dimension 1, a specialized algorithm ensures that the
-resulting zonotope only has a single generator.
+If the map has output dimension 1, a specialized algorithm ensures that the
+resulting zonotope only has a single generator (or none if the map is zero).
 """
-function linear_map(M::AbstractMatrix, Z::AbstractZonotope)
-    @assert dim(Z) == size(M, 2) "a linear map of size $(size(M)) cannot be " *
-                                 "applied to a set of dimension $(dim(Z))"
-
+@validate function linear_map(M::AbstractMatrix, Z::AbstractZonotope)
     if size(M, 1) == 1
         # yields only one generator
         return _linear_map_zonotope_1D(M, Z)
@@ -327,7 +322,8 @@ function _linear_map_zonotope_1D(M::AbstractMatrix, Z::LazySet)
     @inbounds for g in generators(Z)
         gi += abs(sum(M[1, i] * g[i] for i in eachindex(g)))
     end
-    return Zonotope(c, hcat(gi))
+    G = iszero(gi) ? Matrix{N}(undef, 1, 0) : hcat(gi)
+    return Zonotope(c, G)
 end
 
 function _linear_map_zonotope_nD(M::AbstractMatrix, Z::LazySet)
@@ -745,8 +741,7 @@ function split(Z::AbstractZonotope, gens::AbstractVector{Int},
 end
 
 # project via the concrete linear map, which is typically efficient
-function project(Z::AbstractZonotope{N}, block::AbstractVector{Int};
-                 kwargs...) where {N}
+@validate function project(Z::AbstractZonotope{N}, block::AbstractVector{Int}; kwargs...) where {N}
     n = dim(Z)
     M = projection_matrix(block, n, N)
     Z2 = linear_map(M, Z)
@@ -1065,7 +1060,7 @@ function _weighted_gens!(indices, G::AbstractMatrix{N}, ::Union{ASB10,COMB03}) w
 end
 
 # Return the indices of the generators in G (= columns) sorted according to
-# ||⋅||₁ - ||⋅||∞ difference. The generator index with highest score goes first.
+# ‖⋅‖₁ - ‖⋅‖∞ difference. The generator index with highest score goes first.
 function _weighted_gens!(indices, G::AbstractMatrix{N}, ::GIR05) where {N}
     n, p = size(G)
     weights = Vector{N}(undef, p)
@@ -1152,15 +1147,14 @@ function _genmat_static(::AbstractZonotope) end
 
 Compute the exact ``ℓ₁`` norm of a zonotope with generator matrix ``G ∈ \\mathbb{R}^{d×n}``
 
-### Notes 
+### Notes
 
-The function exploits the fact that the mapping ``ξ ↦ \\| c + ∑_{i=1}^n ξ_i g_i \\|_1`` is 
-a convex function of the coefficients ``ξ_i``.  As a result, its maximum over the hypercube ``[-1,1]^n`` is
-attained at one of the ``2^n`` corners.
+The function exploits the fact that the mapping ``ξ ↦ ‖ c + ∑_{i=1}^n ξ_i g_i ‖_1`` is
+a convex function of the coefficients ``ξ_i``.  As a result, its maximum over the hypercube
+``[-1,1]^n`` is attained at one of the ``2^n`` corners.
 
-This algorithm has time complexity ``\\mathcal{O}(2ⁿ · d)``, and thus is only practical for zonotopes
-with a small number of generators.
-
+This algorithm has time complexity ``\\mathcal{O}(2ⁿ · d)``, and thus is only practical for
+zonotopes with a small number of generators.
 """
 function _l1_norm(Z::AbstractZonotope{N}) where {N}
     n = ngens(Z)

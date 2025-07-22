@@ -18,12 +18,16 @@ size(::AbstractMatrixZonotope, ::Int)
 ```@docs
 MatrixZonotope
 ```
+
 ## Operations
+
 ```@docs
 center(::MatrixZonotope)
 generators(::MatrixZonotope)
 transpose(::MatrixZonotope)
 ngens(::MatrixZonotope)
+norm(::MatrixZonotope, ::Real)
+_rowwise_zonotope_norm
 rand(::Type{MatrixZonotope})
 *(::Real, ::MatrixZonotope)
 norm(::MatrixZonotope, ::Real)
@@ -35,7 +39,9 @@ _rowwise_zonotope_norm
 ```@meta
 CurrentModule = LazySets.API
 ```
+
 Undocumented implementations:
+* [`eltype`](@ref eltype(::Type{<:LazySet}))
 * [`scale`](@ref scale(::Real, ::LazySet))
 * [`scale!`](@ref scale!(::Real, ::LazySet))
 * [`eltype`](@ref eltype(::Type{<:LazySet}))

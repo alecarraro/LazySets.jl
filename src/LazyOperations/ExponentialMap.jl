@@ -366,8 +366,8 @@ If the direction has norm zero, the result depends on the wrapped set.
 If ``E = \\exp(M)⋅X``, where ``M`` is a matrix and ``X`` is a set, it
 follows that ``σ(d, E) = \\exp(M)⋅σ(\\exp(M)^T d, X)`` for any direction ``d``.
 """
-function σ(d::AbstractVector, em::ExponentialMap;
-           backend=get_exponential_backend())
+@validate function σ(d::AbstractVector, em::ExponentialMap;
+                     backend=get_exponential_backend())
     N = promote_type(eltype(d), eltype(em))
     v = _expmv(backend, one(N), transpose(em.expmat.M), d)  # exp(M^T) * d
     return _expmv(backend, one(N), em.expmat.M, σ(v, em.X))  # exp(M) * σ(v, X)
@@ -395,8 +395,8 @@ The evaluation of the support function in the given direction.
 If ``E = \\exp(M)⋅X``, where ``M`` is a matrix and ``X`` is a set, it
 follows that ``ρ(d, E) = ρ(\\exp(M)^T d, X)`` for any direction ``d``.
 """
-function ρ(d::AbstractVector, em::ExponentialMap;
-           backend=get_exponential_backend())
+@validate function ρ(d::AbstractVector, em::ExponentialMap;
+                     backend=get_exponential_backend())
     N = promote_type(eltype(d), eltype(em))
     v = _expmv(backend, one(N), transpose(em.expmat.M), d)  # exp(M^T) * d
     return ρ(v, em.X)
@@ -443,10 +443,8 @@ julia> [1.0, 1.0] ∈ em
 true
 ```
 """
-function ∈(x::AbstractVector, em::ExponentialMap;
-           backend=get_exponential_backend())
-    @assert length(x) == dim(em) "a vector of length $(length(x)) is " *
-                                 "incompatible with a set of dimension $(dim(em))"
+@validate function ∈(x::AbstractVector, em::ExponentialMap;
+                     backend=get_exponential_backend())
     N = promote_type(eltype(x), eltype(em))
     y = _expmv(backend, -one(N), em.expmat.M, x)
     return y ∈ em.X

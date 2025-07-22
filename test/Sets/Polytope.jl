@@ -1,8 +1,13 @@
 using LazySets, Test, LinearAlgebra
 using LazySets: linear_map_inverse, affine_map_inverse
 using LazySets.ReachabilityBase.Arrays: SingleEntryVector, ispermutation
+if !isdefined(@__MODULE__, Symbol("@tN"))
+    macro tN(v)
+        return v
+    end
+end
 
-for N in [Float64, Float32, Rational{Int}]
+for N in @tN([Float64, Float32, Rational{Int}])
     # random polytopes
     @test_throws ArgumentError rand(HPolytope; N=N, dim=1, num_vertices=3)
     p = rand(HPolytope; N=N, dim=1, num_vertices=0)
@@ -41,7 +46,7 @@ for N in [Float64, Float32, Rational{Int}]
     addconstraint!(p, c2)
 
     # support vector of polytope with no constraints
-    @test_throws ErrorException σ(N[0], HPolytope{N}())
+    @test_throws DimensionMismatch σ(N[0], HPolytope{N}())
 
     # boundedness
     @test isbounded(p) && isbounded(p, false) && isboundedtype(typeof(p))
@@ -214,8 +219,8 @@ for N in [Float64, Float32, Rational{Int}]
     @test σ(d, p) == N[1, 0]
     # empty polytope
     V = VPolytope{N}()
-    @test_throws ErrorException ρ(d, V)
-    @test_throws ErrorException σ(d, V)
+    @test_throws DimensionMismatch ρ(d, V)
+    @test_throws DimensionMismatch σ(d, V)
     # one vertex
     V = VPolytope([N[2, 1]])
     @test σ(d, V) == N[2, 1]
@@ -284,7 +289,7 @@ for N in [Float64, Float32, Rational{Int}]
     @test translate!(pp, N[1, 2]) == VPolytope([N[1, 2], N[2, 2], N[1, 3]]) == pp
     # empty polytope
     V = VPolytope{N}()
-    @test translate!(copy(V), N[1]) == V
+    @test_throws DimensionMismatch translate!(copy(V), N[1])
 
     # copy (see #1002)
     p, q = [N(1)], [N(2)]
@@ -301,7 +306,7 @@ for N in [Float64, Float32, Rational{Int}]
     @test project(V, [1, 2, 3]) == V
     # empty polytope
     V = VPolytope{N}()
-    @test project(V, [1]) == V
+    @test_throws DimensionMismatch project(V, [1])
 
     # linear_map with redundant vertices
     A = N[1 0; 0 0]
@@ -351,7 +356,7 @@ end
 @test HPolytope() isa HPolytope{Float64}
 @test VPolytope() isa VPolytope{Float64,Vector{Float64}}
 
-for N in [Float64, Float32]
+for N in @tN([Float64, Float32])
     # rand
     p = rand(HPolytope; N=N, dim=2, num_vertices=0)
     @test p isa HPolytope{N} && dim(p) == 2 && isempty(p)
@@ -431,7 +436,7 @@ for N in [Float64]
     @test N[0, 1 // 2] ∉ q
     # empty polytope
     V = VPolytope{N}()
-    @test N[0] ∉ V
+    @test_throws DimensionMismatch N[0] ∈ V
     # one vertex
     V = VPolytope([N[1, 2]])
     @test N[1, 2] ∈ V && N[2, 2] ∉ V
