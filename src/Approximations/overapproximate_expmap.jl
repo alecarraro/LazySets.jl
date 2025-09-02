@@ -186,6 +186,19 @@ function load_intervalmatrices_overapproximation_expmap()
         The remainder term ``E_k`` is computed through interval arithmetic
         following [AlthoffKS11; Proposition 4.1](@citet).
         """
+        function _matrix_exp_remainder(MZ::AbstractMatrixZonotope{N}, k::Int) where {N}
+            n = size(MZ, 1)
+            matnorm = overapproximate_norm(MZ, Inf)
+            # ϵ = matnorm / (k + 2)
+            # if ϵ >= 1
+            #     @warn "k should be chosen such that ϵ < 1 " ϵ
+            # end
+            # bound = matnorm^(k + 1) / (factorial(k + 1) * (1 - ϵ))
+            bound = exp(matnorm) - sum([matnorm^i / factorial(i) for i in 0:k])
+            E = IntervalMatrix(fill(IA.interval(N(-bound), N(bound)), n, n))
+            return E
+        end
+
         function overapproximate(expA::MatrixZonotopeExp{N,T}, ::Type{<:MatrixZonotope},
                                  k::Int=2) where {N,T<:AbstractMatrixZonotope{N}}
             # overapproximate the exponent, which can be a product A*B*…
@@ -203,8 +216,7 @@ function load_intervalmatrices_overapproximation_expmap()
             W = MatrixZonotope(center(W) + Matrix{N}(I, size(W)), generators(W))
 
             # overapproximate mat zon by interval matrix and overapproximate remainder
-            IM = overapproximate(MZ, IntervalMatrix)
-            E = IntervalMatrices._exp_remainder(IM, N(1), k)
+            E = _matrix_exp_remainder(MZ, k)
 
             res = minkowski_sum(W, convert(MatrixZonotope, E))
             return remove_redundant_generators(res)
