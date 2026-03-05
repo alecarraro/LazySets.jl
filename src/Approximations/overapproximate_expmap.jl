@@ -8,7 +8,7 @@ function _compute_series_coefficients(B, S0::S,
     Bc = copy(B)
 
     @inbounds for i in 1:k
-        term = overapproximate(scale!(1 / i, Bc) * term, S)
+        term = overapproximate(scale(1 / i, Bc) * term, S)
         coeffs[i + 1] = term
     end
     return coeffs
